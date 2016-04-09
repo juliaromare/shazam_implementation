@@ -32,7 +32,7 @@ there are two classes you will work closely with:
 `AudioFingerprinter` is an interface that you will need to implement in your own class. It specifies the method decomposition needed to fingerprint and recognize a song.
 
 Before you continue, you should answer the following questions. Answers to these questions will be **due on Monday, April 18th**. You should work and discuss with your partner,
- but submit answers in your own words on moodle.
+ but submit individual answers in your own words on moodle.
 
 1. In your own words, describe a general overview of the steps that need to be accomplished in order to recognize a song.
 2. What is the purpose of the `DataPoint` class and its relationship to the `matcherDB` instance variable in the `SongDatabase` class? 
@@ -63,7 +63,7 @@ Once `SimpleFingerprinter` is working, complete the TODO comment in the MainApp 
 
 ### Submission:
 
-If you worked with a partner, I need to know so that I can give you credit. Please right-click the 124-hw7 module in Intellij.
+Since you worked with a partner, I need to know who so that I can give you credit. Please right-click the 124-hw7 module in Intellij.
 Select new->file and enter the name as "partner-assignment.txt". In the text document add both of your names. Make sure the file is added to git (it should show up in green)!
 
 Make sure to commit and push, then check on github that everything is uploaded correctly.
