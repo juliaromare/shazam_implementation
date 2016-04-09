@@ -47,7 +47,7 @@ as a parameter to the constructor to initialize an instance variable. Look caref
 to make sure you are implementing each method correctly.
 
 You may make use of the code provided in the [Shazam It!](http://www.toptal.com/algorithms/shazam-it-music-processing-fingerprinting-and-recognition)
-article to determine the key points and hash function.
+article to determine the key points and hash function, but keep in mind that this code may not be complete and will need to be modified.
 
 ### Task 2:
 
