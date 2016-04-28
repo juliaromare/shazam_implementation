@@ -237,8 +237,8 @@ public class MainApp extends Application {
     @Override
     public void start(Stage primaryStage) {
         SongDatabase songDB = new SongDatabase();
-        //TODO: Initialize the AudioFingerPrinter with your implementing class.
-        recognizer = null;
+        // Initialize the AudioFingerPrinter with your implementing class.
+        recognizer = new Fingerprinter(songDB);
         songDB.setFingerprinter(recognizer);
 
         Scene scene = new Scene(createContent(primaryStage), 1200, 800);

@@ -29,7 +29,7 @@ public class SongDatabase {
     private ConcurrentHashMap<Integer, String> songNames; // Maps songId to the name.
     private ConcurrentHashMap<Long, List<DataPoint>> matcherDB; // Maps a fingerprint hash to a list of datapoints (song/time offsets) where the hash was calculated.
     private int nextSongId; // Used to assign ids to songs as they are added to the database. Starts at zero and increments by one for each song.
-    private AudioFingerprinter fingerprinter;
+    private AudioFingerprinter fingerprinter; // Polymorphic instance of AudioFingerprinter to get its methods.
 
     /**
      * Constructor to initialize instance variables.
@@ -38,7 +38,6 @@ public class SongDatabase {
         songNames = new ConcurrentHashMap<>();
         matcherDB = new ConcurrentHashMap<>();
         nextSongId = 0;
-        fingerprinter = null;
     }
 
     /**
@@ -150,17 +149,38 @@ public class SongDatabase {
         if (audioRawData != null) {
             int songId = nextSongId;
             nextSongId++;
-            //TODO: Add the song file to songNames map using the songID as the key. You can get the nume of the file using file.getName().
+            // Add the song file to songNames map using the songID as the key. You can get the nume of the file using file.getName().
+            songNames.put(songId, file.getName());
 
-            //TODO: Create a fingerprint of the file by:
+            // Create a fingerprint of the file by:
+
             // 1. converting the raw data to the frequency domain
+            double [][] frequencyDomain = convertToFrequencyDomain(audioRawData);
+
             // 2. determining keypoints in the frequency data
+            long [][] keyPoints = fingerprinter.determineKeyPoints(frequencyDomain);
+
             // 3. For each chunk of time:
-            //          4.calculate the hash of the corresponding key points
-            //          5. Create a datapoint object representing the time and song.
-            //          6. Add the datapoint to list of datapoints that correspond with a specific hash in the matchedDB map (creating the list if it doesn't exist)
+            int timeInSong = 0;
+            for(long[] times : keyPoints){
 
+                // 4.calculate the hash of the corresponding key points
+                long hashTag = fingerprinter.hash(times);
 
+                // 5. Create a datapoint object representing the time and song.
+                DataPoint dataPoint = new DataPoint(songId, timeInSong);
+
+                // 6. Add the datapoint to list of datapoints that correspond with a specific hash in the matchedDB map (creating the list if it doesn't exist)
+                if(matcherDB.contains(hashTag)){
+                    matcherDB.get(hashTag).add(dataPoint);
+                }
+                else{
+                    List<DataPoint> dpList = new ArrayList<DataPoint>();
+                    dpList.add(dataPoint);
+                    matcherDB.put(hashTag, dpList);
+                }
+                timeInSong++;
+            }
         }
         System.out.println("Finished analyzing " + file.getName());
     }

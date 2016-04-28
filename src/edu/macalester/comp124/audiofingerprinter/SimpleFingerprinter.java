@@ -11,17 +11,17 @@ public class SimpleFingerprinter {
 
     public static void main(String[] args){
 
-        //TODO: change path to a directory containing mp3s on your harddrive
-        String path = "C:\\Users\\bjackson\\Desktop\\music";
+        //set path to a directory containing mp3s on your harddrive
+        String path = "/Users/dakotabaker/Music/hw7music";
         System.out.println("Loading db...");
 
         SongDatabase db = new SongDatabase();
-        //TODO: initialize the AudioFingerPrinter with your implementing class and pass it the song database.
-        AudioFingerprinter rec = null;
+        //initialize the AudioFingerPrinter with your implementing class and pass it the song database.
+        AudioFingerprinter rec = new Fingerprinter(db);
         db.setFingerprinter(rec);
         db.loadDatabase(path);
-        //TODO: Change song to a song on your harddrive.
-        String song = "C:\\Users\\bjackson\\Desktop\\music\\06 Vienna.mp3";
+        //set song to a song on your harddrive.
+        String song = "/Users/dakotabaker/Music/hw7music/01 Viva la Vida.mp3";
         System.out.println("Recognizing...");
         File fileIn = new File(song);
         List<String> results = rec.recognize(fileIn);

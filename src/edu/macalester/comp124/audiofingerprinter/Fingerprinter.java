@@ -1,20 +1,23 @@
 package edu.macalester.comp124.audiofingerprinter;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 /**
+ * Creates a "fingerprint" of an audio sample to compare to songs from a SongDatabase and recognize the song.
  * Created by dakotabaker on 4/18/16.
  */
 
 public class Fingerprinter implements AudioFingerprinter {
 
-    private SongDatabase songDatabase;
-    private final int[] RANGE;
+    private SongDatabase songDatabase; // A SongDatabase object containing songs to process and compare the sample to.
+    private final int[] RANGE; // An array of integers that are the boundaries of the key frequency ranges.
     private static final int FUZ_FACTOR = 2; // Handles background noise.
 
+    /**
+     * Constructor for the Fingerprinter. Initializes RANGE.
+     * @param songDB instance of SongDatabase to set the instance variable, songDatabase, to.
+     */
     public Fingerprinter(SongDatabase songDB){
         this.songDatabase = songDB;
         RANGE = new int[] {40, 80, 120, 180, 300}; // frequencies for ranges of different tones.
@@ -23,7 +26,7 @@ public class Fingerprinter implements AudioFingerprinter {
 
 
     /**
-     * Returns the database of songs that this fingerprinter uses to recognize.
+     * Returns the database of songs that Fingerprinter uses to recognize a sample.
      * @return the SongDatabase instance variable of the class.
      */
     @Override
@@ -45,18 +48,106 @@ public class Fingerprinter implements AudioFingerprinter {
      */
     @Override
     public List<String> recognize(byte[] audioData) {
-        List<String> matchingSongs = new LinkedList<String>();
+        List<MatchingSong> matchingSongs;
 
         double [][] sample = songDatabase.convertToFrequencyDomain(audioData);
         long [][] keyPoints = determineKeyPoints(sample);
-        for(long[] freqAtTime : keyPoints) {
-            long hashTag = hash(freqAtTime);
-            List <DataPoint> songDBDataPoints = songDatabase.getMatchingPoints(hashTag); // Trying to match songs and time offsets to the sample 4/21
-            for(DataPoint dp : songDBDataPoints) {
+        HashMap<Integer, HashMap<Integer, Integer>> matchCounts = new HashMap<Integer, HashMap<Integer, Integer>>();
 
+        int sampleTime = 0;
+        for(long[] time : keyPoints) {
+
+            long hashTag = hash(time);
+            List <DataPoint> songDBDataPoints = songDatabase.getMatchingPoints(hashTag); // Trying to match songs and time offsets to the sample 4/21
+
+            if (songDBDataPoints != null) {
+                for (DataPoint dp : songDBDataPoints) {
+                    int sID = dp.getSongId();
+                    int dBTime = dp.getTime();
+                    int offset = Math.abs(sampleTime - dBTime);
+                    if (matchCounts.containsKey(sID)) {
+                        HashMap<Integer, Integer> offsetCount = matchCounts.get(sID);
+                        if (offsetCount.containsKey(offset)) {
+                            int count = offsetCount.get(offset);
+                            count++;
+                            offsetCount.put(offset, count);
+                        } else {
+                            offsetCount.put(offset, 1);
+                        }
+                    }
+                    //If song doesn't have a match, create a hashmap for that song and add offset and count to hashmap within it.
+                    else {
+                        HashMap<Integer, Integer> offsetCount = new HashMap<Integer, Integer>();
+                        offsetCount.put(offset, 1);
+                        matchCounts.put(sID, offsetCount);
+                    }
+                }
+            }
+            sampleTime++;
+        }
+
+        matchingSongs = createMatchingSongList(matchCounts);
+
+        Collections.sort(matchingSongs);
+        Collections.reverse(matchingSongs);
+
+       return songsToStringList(matchingSongs);
+    }
+
+
+
+    /**
+     * Creates a MatchingSong with the songID and greatest consecutive offset count.
+     * @param songID int of the song's ID.
+     * @param offsetCount HashMap with keys that are time offsets and values that are their counts.
+     * @return a MatchingSong holding the songID and the maximum offset count for this song.
+     */
+    private MatchingSong createMatchingSong(int songID, HashMap<Integer, Integer> offsetCount){
+        int max = -1;
+        for(int offset : offsetCount.keySet()){
+            int value = offsetCount.get(offset);
+            if(value > max){
+                max = value;
             }
         }
-        return null;
+        return new MatchingSong(songID, max);
+    }
+
+
+    /**
+     * Creates an ArrayList of MatchingSongs.
+     * @param matchCounts HashMap with keys that are the songIDs and values that are HashMaps of time offsets and their counts.
+     * @return an ArrayList of MatchingSong objects with their greatest consecutive offset count.
+     */
+    private List<MatchingSong> createMatchingSongList(HashMap<Integer, HashMap<Integer, Integer>> matchCounts){
+        List<MatchingSong> matchingSongs = new ArrayList<MatchingSong>();
+
+        for (int songID : matchCounts.keySet()) {
+            HashMap<Integer, Integer> offsetCount = matchCounts.get(songID);
+            matchingSongs.add(createMatchingSong(songID, offsetCount));
+        }
+
+        return matchingSongs;
+    }
+
+
+    /**
+     * Converts a List of MatchingSongs into a list of strings containing the song title and
+     * greatest consecutive offset count.
+     * @param matchingSongs a List of MatchingSong objects.
+     * @return rankedMatches, the List of song strings containing song titles and their maximum offset counts.
+     */
+    private List<String> songsToStringList(List<MatchingSong> matchingSongs){
+        List<String> rankedMatches = new ArrayList<>();
+
+        for(MatchingSong matchingSong : matchingSongs) {
+            StringBuilder nameAndMatches = new StringBuilder();
+            String name = songDatabase.getSongName(matchingSong.getSongID());
+            int matches = matchingSong.getMaxCount();
+            nameAndMatches.append(name + ": with " + matches + " matches.");
+            rankedMatches.add(nameAndMatches.toString());
+        }
+        return rankedMatches;
     }
 
     /**
@@ -67,7 +158,9 @@ public class Fingerprinter implements AudioFingerprinter {
      */
     @Override
     public List<String> recognize(File fileIn) {
-        return null;
+
+        return recognize(songDatabase.getRawData(fileIn));
+
     }
 
     /**
@@ -84,8 +177,8 @@ public class Fingerprinter implements AudioFingerprinter {
      */
     @Override
     public long[][] determineKeyPoints(double[][] results) {
-        double [][] highMag = new double[results.length][4]; // First index is time slice, second index is index of frequency ranges, stores highest MAGNITUDE in the given range.
-        long [][] keyPoints = new long[results.length][4]; // First index is time slice, second index is index of frequency ranges, stores highest FREQUENCY in the given range.
+        double [][] highMag = new double[results.length][5]; // First index is time slice, second index is index of frequency ranges, stores highest MAGNITUDE in the given range.
+        long [][] keyPoints = new long[results.length][5]; // First index is time slice, second index is index of frequency ranges, stores highest FREQUENCY in the given range.
 
         for (int t = 0; t < results.length; t++) {
             for (int freq = 40; freq < 300 ; freq++) {
@@ -109,8 +202,8 @@ public class Fingerprinter implements AudioFingerprinter {
 
     /**
      * Determines which range the frequency is in.
-     * @param freq
-     * @return range index
+     * @param freq a double of a frequency value in the frequency domain.
+     * @return the index for the frequency range that this input frequency is in.
      */
     public int getIndex(double freq) {
         int i = 0;
@@ -121,8 +214,8 @@ public class Fingerprinter implements AudioFingerprinter {
 
     /**
      * Returns a hash combining information of several keypoints.
-     * @param points array of key points for a particular slice of time. Must be at least length 4.
-     * @return
+     * @param points an array of key points for a particular slice of time. Must be at least length 4.
+     * @return a long that is a hash representing each unique frequency domain.
      */
     @Override
     public long hash(long[] points) {
