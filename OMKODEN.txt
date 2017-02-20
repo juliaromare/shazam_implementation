@@ -1,0 +1,7 @@
+Detta är en implementation of Shazam algoritmen. Dakota Baker och jag gjorde pair programming. 
+
+README.md filen är en fil vi fick med instruktioner, och i stora drag är detta vad Dakota och jag gjorde:
+- Gjorde klart klassen SimpleFingerprinter.
+- Skrev klart metoden processFile i SongDatabase.
+- Skrev klassen MatchingSong.
+- Skrev klassen Fingerprinter. 
